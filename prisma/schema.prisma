@@ -1,0 +1,201 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  login         String      @unique
+  email         String      @unique
+  password      String 
+  firstName     String?
+  secondName    String?
+  isBlocked     Boolean     @default(false)
+  isPremium     Boolean     @default(false)
+  isActivated   Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  image         File        @relation(fields: [imageId], references: [id])
+  imageId       String      @default("21dee9ec-0e79-4dc0-9577-5052343f63fe")
+  tokens        Token[]
+  members       Member[]
+  author        Task[]      @relation("author")
+  updater       Task[]      @relation("updater")
+  performer     Task[]      @relation("performer")
+  histories     History[]
+  comments      Comment[]
+  spentTime     SpentTime[]
+  personalTasks PersonalTask[]
+}
+
+model Role {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  members Member[]
+}
+
+model Token {
+  id           String   @id @default(uuid())
+  userAgent    String
+  refreshToken String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+
+  @@unique([userId, userAgent], name: "tokenUnique")
+}
+
+model Workspace {
+  id       String     @id @default(uuid())
+  name     String
+  rows     Row[]
+  columns  Column[]
+  members  Member[]
+  desks    Desk[]
+  tags     Tag[]
+  taskTypes TaskType[]
+}
+
+model Row {
+  id          String    @id @default(uuid()) 
+  name        String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    
+  tasks       Task[]
+}
+
+model Column {
+  id          String    @id @default(uuid()) 
+  name        String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    
+  tasks       Task[]
+}
+
+model Member {
+  id          String    @id @default(uuid())  
+  isActivated Boolean   @default(false)
+  isBlocked   Boolean   @default(false)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId      String    
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String    
+}
+
+model Desk {
+  id          String    @id @default(uuid()) 
+  name        String
+  isCurrent   Boolean   @default(false)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    
+  tasks       Task[]
+}
+
+model Tag {
+  id          String    @id @default(uuid()) 
+  name        String
+  background  String
+  color       String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    
+  tasks       Task[]
+}
+
+model TaskType {
+  id          String    @id @default(uuid()) 
+  name        String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    
+  tasks       Task[]
+}
+
+model History {
+  id             String   @id @default(uuid()) 
+  updatedFields  String[]
+  fieldsValues   String[]
+  previousValues String[]
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String   
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId         String   
+}
+
+model Comment {
+  id        String   @id @default(uuid()) 
+  text      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String   
+}
+
+model SpentTime {
+  id               String   @id @default(uuid())
+  currentTimeSpent Int 
+  spentTime        Int
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id])
+  userId           String   
+  task             Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId           String   
+}
+
+model Task {
+  id                String      @id @default(uuid()) 
+  title             String
+  description       String?
+  initialAssessment Int?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime?
+  author            User        @relation("author", fields: [authorId], references: [id])
+  authorId          String      
+  updater           User?       @relation("updater", fields: [updaterId], references: [id])
+  updaterId         String?     
+  performer         User?       @relation("performer", fields: [performerId], references: [id])
+  performerId       String?     
+  row               Row         @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  rowId             String      
+  column            Column      @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  columnId          String      
+  taskType          TaskType    @relation(fields: [taskTypeId], references: [id], onDelete: Cascade)
+  taskTypeId        String      
+  desk              Desk        @relation(fields: [deskId], references: [id], onDelete: Cascade)
+  deskId            String      
+  files             File[]
+  tags              Tag[]
+  histories         History[]
+  comments          Comment[]
+  spentTime         SpentTime[]
+}
+
+model PersonalTask {
+  id          String   @id @default(uuid()) 
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  deadline    DateTime
+  isDone      Boolean  @default(false)
+  isImportant Boolean
+  isUrgent    Boolean
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   
+  files       File[]
+}
+
+model File {
+  id   String @id @default(uuid()) 
+  path String @unique
+  user User[]
+  task Task[]
+  personal PersonalTask[]
+}
+
